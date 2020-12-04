@@ -4,3 +4,6 @@
 [submodule "thirdparty/zmq"]
 	path = thirdparty/zmq
 	url = https://github.com/zeromq/libzmq.git
+[submodule "thirdparty/caf"]
+	path = thirdparty/caf
+	url = https://github.com/actor-framework/actor-framework.git
