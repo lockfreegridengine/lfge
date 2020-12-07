@@ -16,6 +16,8 @@ set(LFGE_VERSION_PATCH 0)
 set(LFGE_VERSION_TWEAK 0)
 set(LFGE_BINARY_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
 
+find_package(CAF)
+
 add_subdirectory(core)
 add_subdirectory(client)
 add_subdirectory(resource_manager)
