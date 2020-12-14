@@ -13,6 +13,16 @@ CAF_ERROR_CODE_ENUM(DataContainerErrors)
 
 namespace lfge::core{
 
+    /**
+     * @brief  Data container actor to store just a value like set, vector etc
+     *         Will reply for   
+     *              read_atom -> gives element at a given index
+     *              write_atom -> inserts a given value into container
+     *              contains_atom -> finds if the given value is in the container
+     * 
+     * @tparam Value 
+     * @tparam Container 
+     */
     template <typename Value, typename Container>
     class DataContainerActor : public caf::stateful_actor<Container>
     {
@@ -51,6 +61,11 @@ namespace lfge::core{
         }
     };
 
+    /**
+     * @brief Partial specialisation of DataContainerActor for std::vector
+     * 
+     * @tparam Value 
+     */
     template <typename Value>
     class DataContainerActor<Value, std::vector<Value>> : public caf::stateful_actor<std::vector<Value>>
     {
