@@ -1,9 +1,10 @@
 #include "Heartbeat.hpp"
 
 using namespace lfge::core;
+using namespace caf;
 
-HeartbeatSender::HeartbeatSender( caf::actor_config& config,
-                        caf::actor sendHeartbeatTo, 
+HeartbeatSender::HeartbeatSender( actor_config& config,
+                        actor sendHeartbeatTo, 
                         const std::size_t& pulseDuration, 
                         const std::size_t& timeout, 
                         const std::size_t& n,
@@ -12,7 +13,7 @@ HeartbeatSender::HeartbeatSender( caf::actor_config& config,
                         std::function<void(const HeartbeatSender&)> onHeartbeat,
                         std::function<void(const HeartbeatSender&)> onTimeout,
                         std::function<void(const HeartbeatSender&)> onRestart ) :
-        event_based_actor(config), 
+        typed_hb_sender(config), 
         sendHeartbeatTo(sendHeartbeatTo), 
         pulseDuration(pulseDuration), 
         timeout(timeout), 
@@ -33,7 +34,7 @@ const std::string& HeartbeatSender::getName() const
     return name;
 }
 
-caf::behavior HeartbeatSender::make_behavior()
+HeartbeatSender::behavior_type HeartbeatSender::make_behavior()
 {
     if( timeout > pulseDuration )
     {
@@ -45,22 +46,21 @@ caf::behavior HeartbeatSender::make_behavior()
 
     return {
         // Called when we start doing heartbeat
-        [&](start_atom)
+        [this](start_atom)
         {
             if( onRestart )
             {
                 onRestart(*this);
             }
             hbrecieved = false;
-            (sendHeartbeatTo);
             //Send timeout event after timeout milliseconds
             delayed_send(this, clock_speed(timeout), timeout_atom_v);
             //restart the counter after pulseDuration milliseconds
             delayed_send(this, clock_speed(pulseDuration), start_atom_v);
-            send( sendHeartbeatTo, heartbeat_atom_v, ++currentMessageIndex );
+            anon_send( sendHeartbeatTo, heartbeat_atom_v, ++currentMessageIndex );
         },
         // Called when heartbeat reply is recived
-        [&](heartbeat_reply_atom, const std::size_t messageIndex )
+        [this](heartbeat_reply_atom, std::size_t messageIndex )
         {
             if( messageIndex == currentMessageIndex )
             {
@@ -72,13 +72,8 @@ caf::behavior HeartbeatSender::make_behavior()
                 }
             }
         },
-        [&](heartbeat_atom, const std::size_t messageIndex)
-        {
-            send(this, heartbeat_reply_atom_v, messageIndex);
-        }
-        ,
         // called when timeout event is recieved
-        [&](timeout_atom)
+        [this](timeout_atom)
         {
             if( !hbrecieved )
             {
@@ -98,36 +93,35 @@ caf::behavior HeartbeatSender::make_behavior()
             }
         },
         //Returns current index
-        [&](current_index_atom)
+        [this](current_index_atom) -> result<std::size_t>
         {
             return currentMessageIndex;
-        }
-        ,
-        [&](caf::error& e)
+        },
+        [this]( caf::error e )
         {
-            aout(this) << "Error on Heartbeat sender named " << name << ", Error Message " << to_string(e) << std::endl;
+            aout(this) << "got error " << e;
         }
     };
 }
 
 
 
-HeartbeatReciever::HeartbeatReciever(  caf::actor_config& config, 
+HeartbeatReceiver::HeartbeatReceiver(  caf::actor_config& config, 
                     std::string name,
-                    std::function<void (HeartbeatReciever&, const std::size_t&)> onHeartbeat, 
+                    std::function<void (HeartbeatReceiver&, const std::size_t&)> onHeartbeat, 
                     std::size_t timeout, 
-                    std::function<void (HeartbeatReciever&)> afterTimeout) : 
-                    event_based_actor(config), name(name), onHeartbeat(onHeartbeat), timeout(timeout), afterTimeout(afterTimeout)
+                    std::function<void (HeartbeatReceiver&)> afterTimeout) : 
+                    typed_hb_receiver(config), name(name), onHeartbeat(onHeartbeat), timeout(timeout), afterTimeout(afterTimeout)
 {
 
 }
 
-const std::string& HeartbeatReciever::getName() const
+const std::string& HeartbeatReceiver::getName() const
 {
     return name;
 }
 
-caf::behavior HeartbeatReciever::make_behavior()
+HeartbeatReceiver::behavior_type HeartbeatReceiver::make_behavior()
 {
     if(timeout > 0)
     {
@@ -135,14 +129,14 @@ caf::behavior HeartbeatReciever::make_behavior()
     }
     this->set_default_handler(caf::drop);
     return { 
-        [&](heartbeat_atom, const std::size_t messageIndex)
+        [this](heartbeat_atom, std::size_t messageIndex) -> result<heartbeat_reply_atom, std::size_t>
         {
             hasHeartbeat = true;
             onHeartbeat(*this, messageIndex);
             // TODO: Make the reciever skip message and go to the last one directly
             return caf::make_result( heartbeat_reply_atom_v, messageIndex );
         },
-        [&](timeout_atom)
+        [this](timeout_atom)
         {
             if( !hasHeartbeat )
             {

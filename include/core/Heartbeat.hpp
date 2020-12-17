@@ -6,6 +6,14 @@
 #include "core_atoms.hpp"
 namespace lfge::core{
 
+    // Statically typed actor defination for heartbeat sender
+    using typed_hb_sender = caf::typed_event_based_actor<
+                                        caf::result<void>(lfge::core::start_atom),
+                                        caf::result<void>(lfge::core::heartbeat_reply_atom, std::size_t),
+                                        caf::result<void>(lfge::core::timeout_atom),
+                                        caf::result<std::size_t>(lfge::core::current_index_atom),
+                                        caf::result<void>(caf::error)
+                                    >;
 
     /**
      * @brief This class is used to create a heartbeat sender actor to any actor
@@ -14,7 +22,7 @@ namespace lfge::core{
      *  There are N consecutive timeouts allowed, after N timeout the actor will self destruct
      *  For not having undefined behavior please set pulseDuration > timeout atlease more than 25%
      */
-    class HeartbeatSender : public caf::event_based_actor
+    class HeartbeatSender : public typed_hb_sender
     {
         std::string name;
         std::size_t pulseDuration, timeout, n;
@@ -62,20 +70,19 @@ namespace lfge::core{
          */
         const std::string& getName() const;
 
-        protected:
         /**
          * @brief Overriding the make_behavior to implement require behavior
          * 
          * @return caf::behavior 
          */
-        caf::behavior make_behavior() override;
+        behavior_type make_behavior() override;
     };
 
-    using HbReplierTypedActor = caf::typed_actor< 
-                                    caf::replies_to<heartbeat_atom, const std::size_t&>::with<heartbeat_reply_atom, const std::size_t>,
-                                    caf::reacts_to<timeout_atom>
-                                    >;
-
+    // Statically typed actor defination for hb reciever
+    using typed_hb_receiver = caf::typed_event_based_actor< 
+                                caf::result<heartbeat_reply_atom, std::size_t>(heartbeat_atom, std::size_t),
+                                caf::result<void>(timeout_atom)
+                            >;
     /**
      * @brief This class replies to a given heartbeat event sent by heartbeeat sender
      * Optionally we can give a timeout if no heartbeat event is recieved for timeout time the actor will quit automatically
@@ -84,11 +91,11 @@ namespace lfge::core{
      * afterTimeout functor which is called after a timeout
      * 
      */
-    class HeartbeatReciever : public caf::event_based_actor
+    class HeartbeatReceiver : public typed_hb_receiver
     {
         std::string name;
-        std::function<void (HeartbeatReciever&, const std::size_t&)> onHeartbeat;
-        std::function<void (HeartbeatReciever&)> afterTimeout;
+        std::function<void (HeartbeatReceiver&, const std::size_t&)> onHeartbeat;
+        std::function<void (HeartbeatReceiver&)> afterTimeout;
         std::size_t timeout;
         std::atomic<bool> hasHeartbeat = false;
 
@@ -105,11 +112,11 @@ namespace lfge::core{
          * @param timeout -> timeout in milliseconds (0 for no timeout)
          * @param afterTimeout -> Functor called after timeout
          */
-        HeartbeatReciever(  caf::actor_config& config, 
+        HeartbeatReceiver(  caf::actor_config& config, 
                             std::string name = "",
-                            std::function<void (HeartbeatReciever&, const std::size_t&)> onHeartbeat = nullptr, 
+                            std::function<void (HeartbeatReceiver&, const std::size_t&)> onHeartbeat = nullptr, 
                             std::size_t timeout = 0, 
-                            std::function<void (HeartbeatReciever&)> afterTimeout = nullptr);
+                            std::function<void (HeartbeatReceiver&)> afterTimeout = nullptr);
         
 
         /**
@@ -119,13 +126,11 @@ namespace lfge::core{
          */
         const std::string& getName() const;
 
-        protected:
-
         /**
          * @brief Overriding the make_behavior to implement require behavior
          * 
          * @return caf::behavior 
          */
-        caf::behavior make_behavior() override;
+        behavior_type make_behavior() override;
     };
 }
