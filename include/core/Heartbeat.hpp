@@ -9,11 +9,15 @@ namespace lfge::core{
     // Statically typed actor defination for heartbeat sender
     using typed_hb_sender = caf::typed_event_based_actor<
                                         caf::result<void>(lfge::core::start_atom),
-                                        caf::result<void>(lfge::core::heartbeat_reply_atom, std::size_t),
-                                        caf::result<void>(lfge::core::timeout_atom),
                                         caf::result<std::size_t>(lfge::core::current_index_atom),
-                                        caf::result<void>(caf::error)
+                                        caf::result<void>(const caf::error )
                                     >;
+
+    // Statically typed actor defination for hb reciever
+    using typed_hb_receiver = caf::typed_event_based_actor< 
+                                caf::result<heartbeat_reply_atom, std::size_t>(heartbeat_atom, std::size_t),
+                                caf::result<void>(timeout_atom)
+                            >;
 
     /**
      * @brief This class is used to create a heartbeat sender actor to any actor
@@ -78,11 +82,6 @@ namespace lfge::core{
         behavior_type make_behavior() override;
     };
 
-    // Statically typed actor defination for hb reciever
-    using typed_hb_receiver = caf::typed_event_based_actor< 
-                                caf::result<heartbeat_reply_atom, std::size_t>(heartbeat_atom, std::size_t),
-                                caf::result<void>(timeout_atom)
-                            >;
     /**
      * @brief This class replies to a given heartbeat event sent by heartbeeat sender
      * Optionally we can give a timeout if no heartbeat event is recieved for timeout time the actor will quit automatically

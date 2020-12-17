@@ -42,7 +42,8 @@ HeartbeatSender::behavior_type HeartbeatSender::make_behavior()
         quit(  );
     }
     //Go to start state
-    send( this, start_atom_v );
+    delayed_send( this, clock_speed(pulseDuration), start_atom_v );
+    set_default_handler(caf::print_and_drop);
 
     return {
         // Called when we start doing heartbeat
@@ -53,53 +54,52 @@ HeartbeatSender::behavior_type HeartbeatSender::make_behavior()
                 onRestart(*this);
             }
             hbrecieved = false;
-            //Send timeout event after timeout milliseconds
-            delayed_send(this, clock_speed(timeout), timeout_atom_v);
             //restart the counter after pulseDuration milliseconds
             delayed_send(this, clock_speed(pulseDuration), start_atom_v);
-            anon_send( sendHeartbeatTo, heartbeat_atom_v, ++currentMessageIndex );
-        },
-        // Called when heartbeat reply is recived
-        [this](heartbeat_reply_atom, std::size_t messageIndex )
-        {
-            if( messageIndex == currentMessageIndex )
-            {
-                hbrecieved = true;
-                numberOfPastTimeouts = 0;
-                if(onHeartbeat)
-                {
-                    onHeartbeat(*this);
-                }
-            }
-        },
-        // called when timeout event is recieved
-        [this](timeout_atom)
-        {
-            if( !hbrecieved )
-            {
-                if( onTimeout )
-                {
-                    onTimeout(*this);
-                }
 
-                ++numberOfPastTimeouts;
-                if( numberOfPastTimeouts >= n )
-                {
-                    caf::aout(this) << "Timeout exceeded " << std::endl;
-                    if(onNTimeouts)
-                        onNTimeouts(*this);
-                    quit();
-                }
-            }
+            //Request heartbeat to the sender
+            request( sendHeartbeatTo, clock_speed(timeout), heartbeat_atom_v, ++currentMessageIndex )
+                .then( 
+                    [this]( heartbeat_reply_atom, std::size_t messageIndex )
+                    {
+                        if( messageIndex == currentMessageIndex )
+                        {
+                            hbrecieved = true;
+                            numberOfPastTimeouts = 0;
+                            if(onHeartbeat)
+                            {
+                                onHeartbeat(*this);
+                            }
+                        }
+                    },
+                    [this]( const error& err )
+                    {
+                        if( !hbrecieved )
+                        {
+                            if( onTimeout )
+                            {
+                                onTimeout(*this);
+                            }
+
+                            ++numberOfPastTimeouts;
+                            if( numberOfPastTimeouts >= n )
+                            {
+                                if(onNTimeouts)
+                                    onNTimeouts(*this);
+                                quit();
+                            }
+                        }
+                    }
+            );
         },
         //Returns current index
         [this](current_index_atom) -> result<std::size_t>
         {
             return currentMessageIndex;
         },
-        [this]( caf::error e )
+        [this]( const caf::error &e )
         {
-            aout(this) << "got error " << e;
+            aout(this) << "got error " << to_string(e);
         }
     };
 }
