@@ -65,7 +65,7 @@ caf::behavior HeartbeatSender::make_behavior()
             if( messageIndex == currentMessageIndex )
             {
                 hbrecieved = true;
-                onNTimeouts = 0;
+                numberOfPastTimeouts = 0;
                 if(onHeartbeat)
                 {
                     onHeartbeat(*this);
@@ -90,6 +90,7 @@ caf::behavior HeartbeatSender::make_behavior()
                 ++numberOfPastTimeouts;
                 if( numberOfPastTimeouts >= n )
                 {
+                    caf::aout(this) << "Timeout exceeded " << std::endl;
                     if(onNTimeouts)
                         onNTimeouts(*this);
                     quit();
@@ -132,7 +133,7 @@ caf::behavior HeartbeatReciever::make_behavior()
     {
         delayed_send( this, clock_speed(timeout), timeout_atom_v );
     }
-    
+    this->set_default_handler(caf::drop);
     return { 
         [&](heartbeat_atom, const std::size_t messageIndex)
         {
