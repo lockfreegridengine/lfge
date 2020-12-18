@@ -15,8 +15,7 @@ namespace lfge::core{
 
     // Statically typed actor defination for hb reciever
     using typed_hb_receiver = caf::typed_event_based_actor< 
-                                caf::result<heartbeat_reply_atom, std::size_t>(heartbeat_atom, std::size_t),
-                                caf::result<void>(timeout_atom)
+                                caf::result<heartbeat_reply_atom, std::size_t>(heartbeat_atom, std::size_t)
                             >;
 
     /**

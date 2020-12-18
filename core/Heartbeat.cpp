@@ -97,7 +97,7 @@ HeartbeatSender::behavior_type HeartbeatSender::make_behavior()
         {
             return currentMessageIndex;
         },
-        [this]( const caf::error &e )
+        [this]( const caf::error e )
         {
             aout(this) << "got error " << to_string(e);
         }
@@ -125,26 +125,20 @@ HeartbeatReceiver::behavior_type HeartbeatReceiver::make_behavior()
 {
     if(timeout > 0)
     {
-        delayed_send( this, clock_speed(timeout), timeout_atom_v );
+        //delayed_send( this, clock_speed(timeout), timeout_atom_v );
     }
     this->set_default_handler(caf::drop);
     return { 
         [this](heartbeat_atom, std::size_t messageIndex) -> result<heartbeat_reply_atom, std::size_t>
         {
-            hasHeartbeat = true;
             onHeartbeat(*this, messageIndex);
-            // TODO: Make the reciever skip message and go to the last one directly
             return caf::make_result( heartbeat_reply_atom_v, messageIndex );
         },
-        [this](timeout_atom)
+        after( timeout == 0 ? infinite : std::chrono::milliseconds(timeout) ) >> 
+        [this]()
         {
-            if( !hasHeartbeat )
-            {
-                afterTimeout(*this);
-                quit();
-            }
-            hasHeartbeat = false;
-            delayed_send( this, clock_speed(timeout), timeout_atom_v );
+            afterTimeout(*this);
+            quit();
         } 
     };
 }

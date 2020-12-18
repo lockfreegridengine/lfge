@@ -7,6 +7,8 @@
 #include <random>
 #include <list>
 
+#include "core/core_atoms.hpp"
+
 namespace lfge::resource_manager
 {
     using ServiceName = std::string;
@@ -17,16 +19,26 @@ namespace lfge::resource_manager
         std::list< std::pair<ServiceId, caf::actor> > idsAndActors;
     };
 
-    class ServiceManager : public caf::stateful_actor<ServiceState>
+    using typed_service_manager = caf::typed_event_based_actor<
+                                    caf::result<void>( lfge::core::add_id_to_service, ServiceId, const caf::actor),
+                                    caf::result<void>( lfge::core::remove_actor_for_service, ServiceId id ),
+                                    caf::result< std::string, caf::actor_addr >( lfge::core::find_service )
+                                    >;
+
+    using typed_service_manager_hdl = typed_service_manager::actor_hdl;
+
+    class ServiceManager : public typed_service_manager
     {
         ServiceName serviceName;
         caf::actor_addr creator;
+
+        ServiceState state;
         public:
-        ServiceManager( caf::actor_config& config, const std::string &serviceName, const caf::actor_addr creator );
+        ServiceManager( caf::actor_config& config, const ServiceName &serviceName, const caf::actor_addr creator );
 
-        const std::string& getServiceName() const;
+        const ServiceName& getServiceName() const;
 
-        caf::behavior make_behavior() override;
+        behavior_type make_behavior() override;
 
         void clear();
     };

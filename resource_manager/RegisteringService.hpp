@@ -5,36 +5,43 @@
 
 namespace lfge::resource_manager
 {
-    
+    using typed_registration_actor = caf::typed_event_based_actor<
+                                                caf::result<lfge::core::new_id_atom, std::string>(lfge::core::register_atom, ServiceName),
+                                                caf::result<void>( lfge::core::register_atom, ServiceName, ServiceId),
+                                                caf::result<void>( lfge::core::unregister_atom, ServiceName, ServiceId),
+                                                caf::result<void>( lfge::core::unregister_atom, ServiceId ),
+                                                caf::result<void>( lfge::core::remove_atom, ServiceName ),
+                                                caf::result< std::string, caf::actor_addr >( lfge::core::find_service, ServiceName ),
+                                                caf::result<void>( const caf::error ) 
+                                                >;
+
     class RegisteringService;
-    class ServiceRegistry
-    {
-        public:
 
-        ServiceRegistry();
+    using subscriber_typed_registration_actor = caf::extend<typed_registration_actor>::with<caf::mixin::subscriber>;
 
-        void register_service( caf::event_based_actor& registeringService, const ServiceName &name, const ServiceId& id, caf::actor& actorToCall );
 
-        void unregister_service( caf::event_based_actor& registeringService, const ServiceId& id );
+    using typed_registration_actor_hdl = subscriber_typed_registration_actor::actor_hdl;
 
-        void unregister_service( caf::event_based_actor& registeringService,  const ServiceName &name, const ServiceId& id );
-
-        bool contains( const ServiceId& id) const;
-
-        private:
-        void clear(caf::event_based_actor& registeringService);
-
-        std::unordered_set<ServiceId> serviceIds;
-        std::unordered_map< ServiceName, caf::actor > registeredServiceActors;
-        friend class RegisteringService;
-    };
-
-    class RegisteringService : public caf::stateful_actor< ServiceRegistry >
+    class RegisteringService : public subscriber_typed_registration_actor
     {
         private:
         std::random_device device;
         std::default_random_engine generator;
         std::string create_unique_id( const std::size_t size = 10 );
+
+        void register_service( const ServiceName &name, const ServiceId& id, caf::actor& actorToCall );
+
+        void unregister_service( const ServiceId& id );
+
+        void unregister_service( const ServiceName &name, const ServiceId& id );
+
+        bool contains( const ServiceId& id) const;
+
+        void clear();
+
+        std::unordered_set<ServiceId> serviceIds;
+
+        std::unordered_map< ServiceName, typed_service_manager_hdl > registeredServiceActors;
 
         public:
 
@@ -42,6 +49,6 @@ namespace lfge::resource_manager
 
         RegisteringService(caf::actor_config& config);
 
-        virtual caf::behavior make_behavior() override;
+        virtual behavior_type make_behavior() override;
     };
 }

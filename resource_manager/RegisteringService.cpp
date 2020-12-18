@@ -1,6 +1,5 @@
 #include "RegisteringService.hpp"
 #include <algorithm>
-#include "core/core_atoms.hpp"
 #include "core/Heartbeat.hpp"
 
 
@@ -8,66 +7,63 @@ using namespace lfge::resource_manager;
 
 const std::string RegisteringService::serviceName = "registering_service";
 
-ServiceRegistry::ServiceRegistry()
+
+RegisteringService::RegisteringService(caf::actor_config& config) : subscriber_typed_registration_actor(config), device(), generator(device())
 {
 }
 
-void ServiceRegistry::register_service( caf::event_based_actor& registeringService, const ServiceName &name, const ServiceId& id, caf::actor& actorToCall )
+void RegisteringService::register_service( const ServiceName &name, const ServiceId& id, caf::actor& actorToCall )
 {
     auto ite = registeredServiceActors.find(name);
     if( ite == registeredServiceActors.end() )
     {
         // Service does not exists
-        auto newService = registeringService.spawn<ServiceManager>( name, registeringService.address() );
+        auto newService = spawn<ServiceManager>( name, address() );
 
         registeredServiceActors.insert( std::make_pair( name, newService ) );
-        registeringService.send( newService, lfge::core::add_id_to_service_v, id, actorToCall );
+        send( newService, lfge::core::add_id_to_service_v, id, actorToCall );
     }
     else
     {
         // Service already exists
-        registeringService.send( ite->second, lfge::core::add_id_to_service_v, id, actorToCall );
+        send( ite->second, lfge::core::add_id_to_service_v, id, actorToCall );
     }
     
     serviceIds.insert(id);
 }
 
-void ServiceRegistry::unregister_service( caf::event_based_actor& registeringService, const ServiceId& id )
+void RegisteringService::unregister_service( const ServiceId& id )
 {
     for( auto& service : registeredServiceActors )
     {
-        registeringService.send( service.second, lfge::core::remove_actor_for_service_v, id );
+        send( service.second, lfge::core::remove_actor_for_service_v, id );
     }
 }
 
-void ServiceRegistry::unregister_service( caf::event_based_actor& registeringService,  const ServiceName &name, const ServiceId& id )
+void RegisteringService::unregister_service(  const ServiceName &name, const ServiceId& id )
 {
     auto serviceIte = registeredServiceActors.find(name);
     if( serviceIte != registeredServiceActors.end() )
     {
-        registeringService.send( serviceIte->second, lfge::core::remove_actor_for_service_v, id );
+        send( serviceIte->second, lfge::core::remove_actor_for_service_v, id );
     }
 }
 
-bool ServiceRegistry::contains( const ServiceId& id) const
+bool RegisteringService::contains( const ServiceId& id) const
 {
     return serviceIds.count( id ) > 0;
 }
 
-void ServiceRegistry::clear(caf::event_based_actor& registeringService)
+void RegisteringService::clear(  )
 {
 
     for( auto & p : registeredServiceActors )
     {
         registeredServiceActors.clear();
-        registeringService.send_exit( p.second, caf::sec::none );
+        send_exit( p.second, caf::sec::none );
     }
     registeredServiceActors.clear();
     serviceIds.clear();
-}
-
-RegisteringService::RegisteringService(caf::actor_config& config) : caf::stateful_actor< ServiceRegistry >(config), device(), generator(device())
-{
 }
 
 std::string RegisteringService::create_unique_id( const std::size_t size )
@@ -76,10 +72,10 @@ std::string RegisteringService::create_unique_id( const std::size_t size )
     str.resize(size);
     std::generate(str.begin(), str.end(), [this](){ return 'A' + generator()%25; });
 
-    return this->state.contains(str) ? create_unique_id() : str;
+    return contains(str) ? create_unique_id() : str;
 }
 
-caf::behavior RegisteringService::make_behavior()
+RegisteringService::behavior_type RegisteringService::make_behavior()
 {
     auto grp = this->system().groups().get( "local", serviceName );
     if(grp)
@@ -92,17 +88,17 @@ caf::behavior RegisteringService::make_behavior()
     }
 
     this->set_exit_handler( [this]( auto&& ptr, const caf::exit_msg& ){
-        this->state.clear(*this);
+        clear();
     } );
     
     return {
-        [this]( lfge::core::register_atom, const ServiceName& serviceName )
+        [this]( lfge::core::register_atom, ServiceName serviceName )
         {
             caf::aout(this) << "Registering " << std::endl;
             std::string id = create_unique_id();
             caf::actor actor = caf::actor_cast<caf::actor>( this->current_sender() );
 
-            this->state.register_service( *this, serviceName, id, actor);
+            register_service( serviceName, id, actor);
 
             // TODO : Set timeout and pulse duration in config
             this->system().spawn<lfge::core::HeartbeatSender>(actor, 100, 10, 3, "", [this, serviceName, id](auto&&){
@@ -112,11 +108,11 @@ caf::behavior RegisteringService::make_behavior()
 
             return caf::make_result( lfge::core::new_id_atom_v, id);
         },
-        [this]( lfge::core::register_atom, const ServiceName& serviceName, const ServiceId& id )
+        [this]( lfge::core::register_atom, ServiceName serviceName, ServiceId id )
         {
             caf::aout(this) << "Registering " << std::endl;
             caf::actor actor = caf::actor_cast<caf::actor>( this->current_sender() );
-            this->state.register_service(*this, serviceName, id, actor);
+            register_service( serviceName, id, actor);
 
             // TODO : Set timeout and pulse duration in config
             this->system().spawn<lfge::core::HeartbeatSender>(actor, 100, 10, 3, "", [this, serviceName, id](auto&&){
@@ -125,26 +121,32 @@ caf::behavior RegisteringService::make_behavior()
             } );
 
         },
-        [this]( lfge::core::unregister_atom, const ServiceName& serviceName, ServiceId id )
+        [this]( lfge::core::unregister_atom, ServiceName serviceName, ServiceId id )
         {
             caf::aout(this) << "Unregistering " << std::endl;
-            this->state.unregister_service( *this, serviceName, id );
+            unregister_service( serviceName, id );
         }, 
-        [this]( lfge::core::unregister_atom, const ServiceId& id )
+        [this]( lfge::core::unregister_atom, ServiceId id )
         {
             caf::aout(this) << "Unregistering " << std::endl;
-            this->state.unregister_service( *this, id );
+            unregister_service( id );
         },
-        [this]( lfge::core::remove_atom, const ServiceName& name )
+        [this]( lfge::core::remove_atom, ServiceName name )
         {
             caf::aout(this) << "Removing from " << std::endl;
-            this->state.registeredServiceActors.erase(name);
+            registeredServiceActors.erase(name);
         },
-        [this]( lfge::core::find_service, const ServiceName& serviceName )
+        [this]( lfge::core::find_service, ServiceName serviceName ) -> caf::result< std::string, caf::actor_addr >
         {
-            return this->delegate(this->state.registeredServiceActors[serviceName], lfge::core::find_service_v);
+            auto ite = registeredServiceActors.find(serviceName);
+            if( ite == registeredServiceActors.end() )
+            {
+                aout( this ) << "Service not found" << std::endl;
+                return caf::sec::unexpected_message;
+            }
+            return this->delegate( ite->second, lfge::core::find_service_v);
         },
-        [this]( caf::error& )
+        [this]( const caf::error )
         {
             caf::aout(this) << "Error code received on registering system " << std::endl;
         }
