@@ -101,7 +101,7 @@ RegisteringService::behavior_type RegisteringService::make_behavior()
             register_service( serviceName, id, actor);
 
             // TODO : Set timeout and pulse duration in config
-            this->system().spawn<lfge::core::HeartbeatSender>(actor, 100, 10, 3, "", [this, serviceName, id](auto&&){
+            this->system().spawn<lfge::core::HeartbeatSender>(actor, 100, 10, 3, "Heartbeater for " + id, [this, serviceName, id](auto&&){
                 aout(this) << "unregistering id " << id << std::endl;
                 this->send(this,lfge::core::unregister_atom_v, serviceName, id );
             } );
@@ -142,13 +142,13 @@ RegisteringService::behavior_type RegisteringService::make_behavior()
             if( ite == registeredServiceActors.end() )
             {
                 aout( this ) << "Service not found" << std::endl;
-                return caf::sec::unexpected_message;
+                return lfge_errors::service_not_found;
             }
             return this->delegate( ite->second, lfge::core::find_service_v);
         },
-        [this]( const caf::error )
+        [this]( const caf::error& e )
         {
-            caf::aout(this) << "Error code received on registering system " << std::endl;
+            caf::aout(this) << "Error code received on registering system : " << to_string(e) << std::endl;
         }
     };
 }

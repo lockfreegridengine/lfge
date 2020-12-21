@@ -43,4 +43,5 @@ compile_commands.json
 CTestTestfile.cmake
 _deps
 release
+debug
 [Bb][Uu][Ii][Ll][Dd]

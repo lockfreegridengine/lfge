@@ -1,6 +1,6 @@
 #pragma once
 
-#include "core_atoms.hpp"
+#include "core/core_atoms.hpp"
 #include <unordered_map>
 #include <stdexcept>
 

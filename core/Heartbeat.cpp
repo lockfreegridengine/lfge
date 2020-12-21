@@ -1,4 +1,4 @@
-#include "Heartbeat.hpp"
+#include "core/Heartbeat.hpp"
 
 using namespace lfge::core;
 using namespace caf;

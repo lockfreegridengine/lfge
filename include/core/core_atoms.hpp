@@ -1,7 +1,12 @@
 #pragma once
 #include <caf/all.hpp>
+#include "core/lfge_errors.hpp"
+#include "core/logger.hpp"
 
 CAF_BEGIN_TYPE_ID_BLOCK(lfge_core, first_custom_type_id)
+
+CAF_ADD_TYPE_ID(lfge_core, (lfge_errors))
+CAF_ADD_TYPE_ID(lfge_core, (lfge::core::loglevel))
 
 // General atoms
 CAF_ADD_ATOM(lfge_core, lfge::core, get_atom)
@@ -37,3 +42,5 @@ CAF_ADD_ATOM(lfge_core, lfge::core, serializable_data_atom)
 CAF_ADD_ATOM(lfge_core, lfge::core, proto_buf_data_atom)
 
 CAF_END_TYPE_ID_BLOCK(lfge_core)
+
+CAF_ERROR_CODE_ENUM(lfge_errors)

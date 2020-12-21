@@ -3,7 +3,7 @@
 #include <chrono>
 #include <cassert>
 #include <exception>
-#include "core_atoms.hpp"
+#include "core/core_atoms.hpp"
 namespace lfge::core{
 
     // Statically typed actor defination for heartbeat sender
