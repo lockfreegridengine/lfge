@@ -14,7 +14,7 @@ namespace lfge::resource_manager
     using ServiceName = std::string;
     using ServiceId = std::string;
 
-    struct ServiceState
+    struct service_state
     {
         std::list< std::pair<ServiceId, caf::actor> > idsAndActors;
     };
@@ -27,14 +27,14 @@ namespace lfge::resource_manager
 
     using typed_service_manager_hdl = typed_service_manager::actor_hdl;
 
-    class ServiceManager : public typed_service_manager
+    class service_manager : public typed_service_manager
     {
         ServiceName serviceName;
         caf::actor_addr creator;
 
-        ServiceState state;
+        service_state state;
         public:
-        ServiceManager( caf::actor_config& config, const ServiceName &serviceName, const caf::actor_addr creator );
+        service_manager( caf::actor_config& config, const ServiceName &serviceName, const caf::actor_addr creator );
 
         const ServiceName& getServiceName() const;
 

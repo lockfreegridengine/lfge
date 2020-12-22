@@ -1,18 +1,19 @@
-#include "core/Heartbeat.hpp"
+#include "core/heartbeat.hpp"
+#include "core/logger.hpp"
 
 using namespace lfge::core;
 using namespace caf;
 
-HeartbeatSender::HeartbeatSender( actor_config& config,
+heartbeat_sender::heartbeat_sender( actor_config& config,
                         actor sendHeartbeatTo, 
                         const std::size_t& pulseDuration, 
                         const std::size_t& timeout, 
                         const std::size_t& n,
                         std::string actorName,
-                        std::function<void(HeartbeatSender&)> onNTimeouts,
-                        std::function<void(const HeartbeatSender&)> onHeartbeat,
-                        std::function<void(const HeartbeatSender&)> onTimeout,
-                        std::function<void(const HeartbeatSender&)> onRestart ) :
+                        std::function<void(heartbeat_sender&)> onNTimeouts,
+                        std::function<void(const heartbeat_sender&)> onHeartbeat,
+                        std::function<void(const heartbeat_sender&)> onTimeout,
+                        std::function<void(const heartbeat_sender&)> onRestart ) :
         typed_hb_sender(config), 
         sendHeartbeatTo(sendHeartbeatTo), 
         pulseDuration(pulseDuration), 
@@ -29,16 +30,18 @@ HeartbeatSender::HeartbeatSender( actor_config& config,
 }
 
 
-const std::string& HeartbeatSender::getName() const
+const std::string& heartbeat_sender::getName() const
 {
     return name;
 }
 
-HeartbeatSender::behavior_type HeartbeatSender::make_behavior()
+heartbeat_sender::behavior_type heartbeat_sender::make_behavior()
 {
     if( timeout > pulseDuration )
     {
-        CAF_RAISE_ERROR(std::string("For a HeartbeatSender timeout cannot be greater than pulseDuration (" + name + ")" ).c_str() );
+        std::string error("For a heartbeat_sender timeout cannot be greater than pulseDuration (" + name + ")" );
+        logger::log( loglevel::error, getName() + " heartbeat sender for error " + error );
+        CAF_RAISE_ERROR(error.c_str() );
         quit(  );
     }
     //Go to start state
@@ -49,6 +52,8 @@ HeartbeatSender::behavior_type HeartbeatSender::make_behavior()
         // Called when we start doing heartbeat
         [this](start_atom)
         {
+            logger::log( loglevel::comm, getName() + " sending hb signal" );
+
             if( onRestart )
             {
                 onRestart(*this);
@@ -64,6 +69,7 @@ HeartbeatSender::behavior_type HeartbeatSender::make_behavior()
                     {
                         if( messageIndex == currentMessageIndex )
                         {
+                            logger::log( loglevel::comm, getName() + " got a hb reply " );
                             hbrecieved = true;
                             numberOfPastTimeouts = 0;
                             if(onHeartbeat)
@@ -74,7 +80,8 @@ HeartbeatSender::behavior_type HeartbeatSender::make_behavior()
                     },
                     [this]( const error& err )
                     {
-                        if( !hbrecieved )
+                        logger::log( loglevel::warning, getName() + " heartbeat sender got error " + to_string(err) );
+                        if( err == caf::sec::request_timeout )
                         {
                             if( onTimeout )
                             {
@@ -99,44 +106,42 @@ HeartbeatSender::behavior_type HeartbeatSender::make_behavior()
         },
         [this]( const caf::error e )
         {
-            aout(this) << "got error " << to_string(e);
+            logger::log( loglevel::error, getName() + " received an error message " + to_string(e) );
         }
     };
 }
 
 
 
-HeartbeatReceiver::HeartbeatReceiver(  caf::actor_config& config, 
+heartbeat_receiver::heartbeat_receiver(  caf::actor_config& config, 
                     std::string name,
-                    std::function<void (HeartbeatReceiver&, const std::size_t&)> onHeartbeat, 
+                    std::function<void (heartbeat_receiver&, const std::size_t&)> onHeartbeat, 
                     std::size_t timeout, 
-                    std::function<void (HeartbeatReceiver&)> afterTimeout) : 
+                    std::function<void (heartbeat_receiver&)> afterTimeout) : 
                     typed_hb_receiver(config), name(name), onHeartbeat(onHeartbeat), timeout(timeout), afterTimeout(afterTimeout)
 {
 
 }
 
-const std::string& HeartbeatReceiver::getName() const
+const std::string& heartbeat_receiver::getName() const
 {
     return name;
 }
 
-HeartbeatReceiver::behavior_type HeartbeatReceiver::make_behavior()
+heartbeat_receiver::behavior_type heartbeat_receiver::make_behavior()
 {
-    if(timeout > 0)
-    {
-        //delayed_send( this, clock_speed(timeout), timeout_atom_v );
-    }
     this->set_default_handler(caf::drop);
     return { 
         [this](heartbeat_atom, std::size_t messageIndex) -> result<heartbeat_reply_atom, std::size_t>
         {
+            logger::log( loglevel::comm, getName() + " received an hb message ");
             onHeartbeat(*this, messageIndex);
             return caf::make_result( heartbeat_reply_atom_v, messageIndex );
         },
         after( timeout == 0 ? infinite : std::chrono::milliseconds(timeout) ) >> 
         [this]()
         {
+            logger::log( loglevel::warning, getName() + " to timeout while waiting for messages ");
             afterTimeout(*this);
             quit();
         } 

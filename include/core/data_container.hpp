@@ -1,6 +1,8 @@
 #pragma once
 
 #include "core/core_atoms.hpp"
+#include "core/logger.hpp"
+
 #include <unordered_map>
 #include <stdexcept>
 
@@ -24,7 +26,7 @@ namespace lfge::core{
      * @tparam Container 
      */
     template <typename Value, typename Container>
-    class DataContainerActor : public caf::stateful_actor<Container>
+    class data_container_actor : public caf::stateful_actor<Container>
     {
         public:
         using value_type = Value;
@@ -32,7 +34,7 @@ namespace lfge::core{
         
         Value defaultValue = Value();
 
-        DataContainerActor(caf::actor_config& cfg) : caf::stateful_actor< Container >(cfg)
+        data_container_actor(caf::actor_config& cfg) : caf::stateful_actor< Container >(cfg)
         {
         }
 
@@ -62,12 +64,12 @@ namespace lfge::core{
     };
 
     /**
-     * @brief Partial specialisation of DataContainerActor for std::vector
+     * @brief Partial specialisation of data_container_actor for std::vector
      * 
      * @tparam Value 
      */
     template <typename Value>
-    class DataContainerActor<Value, std::vector<Value>> : public caf::stateful_actor<std::vector<Value>>
+    class data_container_actor<Value, std::vector<Value>> : public caf::stateful_actor<std::vector<Value>>
     {
         public:
         using value_type = Value;
@@ -75,7 +77,7 @@ namespace lfge::core{
         
         Value defaultValue = Value();
 
-        DataContainerActor(caf::actor_config& cfg) : caf::stateful_actor< container_type >(cfg)
+        data_container_actor(caf::actor_config& cfg) : caf::stateful_actor< container_type >(cfg)
         {
         }
 
@@ -120,7 +122,7 @@ namespace lfge::core{
      * @tparam Value> 
      */
     template<typename Key, typename Value, typename Container = std::unordered_map<Key, Value>>
-    class DataContainerMapActor : public caf::stateful_actor<Container>
+    class data_container_map_actor : public caf::stateful_actor<Container>
     {
         public:
         using value_type = Value;
@@ -129,7 +131,7 @@ namespace lfge::core{
 
         Value defaultValue = Value();
 
-        DataContainerMapActor(caf::actor_config& cfg) : caf::stateful_actor< Container >(cfg)
+        data_container_map_actor(caf::actor_config& cfg) : caf::stateful_actor< Container >(cfg)
         {
 
         }

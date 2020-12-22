@@ -25,13 +25,13 @@ namespace lfge::core{
      *  There are N consecutive timeouts allowed, after N timeout the actor will self destruct
      *  For not having undefined behavior please set pulseDuration > timeout atlease more than 25%
      */
-    class HeartbeatSender : public typed_hb_sender
+    class heartbeat_sender : public typed_hb_sender
     {
         std::string name;
         std::size_t pulseDuration, timeout, n;
         std::size_t numberOfPastTimeouts;
-        std::function<void(HeartbeatSender&)> onNTimeouts;
-        std::function<void(HeartbeatSender&)> onHeartbeat, onTimeout, onRestart;
+        std::function<void(heartbeat_sender&)> onNTimeouts;
+        std::function<void(heartbeat_sender&)> onHeartbeat, onTimeout, onRestart;
         caf::actor sendHeartbeatTo;
 
         std::atomic<bool> hbrecieved = false;
@@ -55,16 +55,16 @@ namespace lfge::core{
          * @param onTimeout -> Function to call when we successfullt get a timeout (Optional)
          * @param onRestart -> Function to call when we start a heartbeat (Optional)
          */
-        HeartbeatSender( caf::actor_config& config,
+        heartbeat_sender( caf::actor_config& config,
                          caf::actor sendHeartbeatTo, 
                          const std::size_t& pulseDuration, 
                          const std::size_t& timeout, 
                          const std::size_t& n,
                          std::string actorName = std::string(""),
-                         std::function<void(HeartbeatSender&)> onNTimeouts = nullptr,
-                         std::function<void(const HeartbeatSender&)> onHeartbeat = nullptr,
-                         std::function<void(const HeartbeatSender&)> onTimeout = nullptr,
-                         std::function<void(const HeartbeatSender&)> onRestart = nullptr );
+                         std::function<void(heartbeat_sender&)> onNTimeouts = nullptr,
+                         std::function<void(const heartbeat_sender&)> onHeartbeat = nullptr,
+                         std::function<void(const heartbeat_sender&)> onTimeout = nullptr,
+                         std::function<void(const heartbeat_sender&)> onRestart = nullptr );
 
         /**
          * @brief Get the name for the actor
@@ -89,11 +89,11 @@ namespace lfge::core{
      * afterTimeout functor which is called after a timeout
      * 
      */
-    class HeartbeatReceiver : public typed_hb_receiver
+    class heartbeat_receiver : public typed_hb_receiver
     {
         std::string name;
-        std::function<void (HeartbeatReceiver&, const std::size_t&)> onHeartbeat;
-        std::function<void (HeartbeatReceiver&)> afterTimeout;
+        std::function<void (heartbeat_receiver&, const std::size_t&)> onHeartbeat;
+        std::function<void (heartbeat_receiver&)> afterTimeout;
         std::size_t timeout;
         std::atomic<bool> hasHeartbeat = false;
 
@@ -110,11 +110,11 @@ namespace lfge::core{
          * @param timeout -> timeout in milliseconds (0 for no timeout)
          * @param afterTimeout -> Functor called after timeout
          */
-        HeartbeatReceiver(  caf::actor_config& config, 
+        heartbeat_receiver(  caf::actor_config& config, 
                             std::string name = "",
-                            std::function<void (HeartbeatReceiver&, const std::size_t&)> onHeartbeat = nullptr, 
+                            std::function<void (heartbeat_receiver&, const std::size_t&)> onHeartbeat = nullptr, 
                             std::size_t timeout = 0, 
-                            std::function<void (HeartbeatReceiver&)> afterTimeout = nullptr);
+                            std::function<void (heartbeat_receiver&)> afterTimeout = nullptr);
         
 
         /**

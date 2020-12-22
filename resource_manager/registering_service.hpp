@@ -1,6 +1,6 @@
 #pragma once
 
-#include "ServiceManager.hpp"
+#include "service_manager.hpp"
 #include <random>
 
 namespace lfge::resource_manager
@@ -15,14 +15,14 @@ namespace lfge::resource_manager
                                                 caf::result<void>( const caf::error ) 
                                                 >;
 
-    class RegisteringService;
+    class registering_service;
 
     using subscriber_typed_registration_actor = caf::extend<typed_registration_actor>::with<caf::mixin::subscriber>;
 
 
     using typed_registration_actor_hdl = subscriber_typed_registration_actor::actor_hdl;
 
-    class RegisteringService : public subscriber_typed_registration_actor
+    class registering_service : public subscriber_typed_registration_actor
     {
         private:
         std::random_device device;
@@ -39,15 +39,17 @@ namespace lfge::resource_manager
 
         void clear();
 
+        void spawn_hb_monitor(const ServiceName &serviceName, const ServiceId& id, caf::actor& actorToCall);
+
         std::unordered_set<ServiceId> serviceIds;
 
         std::unordered_map< ServiceName, typed_service_manager_hdl > registeredServiceActors;
 
         public:
 
-        static const std::string serviceName;
+        static const std::string reg_srv_name;
 
-        RegisteringService(caf::actor_config& config);
+        registering_service(caf::actor_config& config);
 
         virtual behavior_type make_behavior() override;
     };

@@ -5,8 +5,8 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 add_executable( ${LFGE_PREFIX}_resource_manager 
     entry.cpp
-    RegisteringService.cpp
-    ServiceManager.cpp)
+    registering_service.cpp
+    service_manager.cpp)
 
 target_link_libraries( ${PROJECT_NAME} ${LFGE_PREFIX}_core )
 target_link_libraries( ${PROJECT_NAME} caf_core )

@@ -7,7 +7,7 @@
 #include <chrono>
 #include<algorithm>
 #include <thread>
-#include "core/Heartbeat.hpp"
+#include "core/heartbeat.hpp"
 #include "core/DataContainer.hpp"
 #include <unordered_map>
 #include <random>
@@ -140,7 +140,7 @@ void caf_main(actor_system& system) {
     10000,
     [](lfge::core::HeartbeatReciever&) {  std::cout << "HB RECIEVER TIMEOUT" << std::endl;  }
     );
-  system.spawn<lfge::core::HeartbeatSender>( hb_replier, 5000, 1000, 3, "MyActor");
+  system.spawn<lfge::core::heartbeat_sender>( hb_replier, 5000, 1000, 3, "MyActor");
 
 
   auto container = system.spawn< lfge::core::DataContainerMapActor<int, std::string> >();

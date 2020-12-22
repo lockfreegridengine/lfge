@@ -7,15 +7,17 @@ namespace lfge::core
 
     enum class loglevel : uint8_t
     {
-        eComm,
-        eDebug,
-        eWarning,
-        eError
+        comm = 0,
+        debug,
+        warning,
+        error
     };
 
     class logger
     {
         public:
+
+        static caf::expected<caf::group> getGroup();
         static void init( caf::actor_system& system );
         static void log( const loglevel& level, const std::string& message );
     };

@@ -5,7 +5,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 add_library( ${PROJECT_NAME} SHARED 
         entry.cpp 
-        Heartbeat.cpp
+        heartbeat.cpp
         lfge_errors.cpp
         logger.cpp
         )

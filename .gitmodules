@@ -1,9 +1,6 @@
 [submodule "thirdparty/cube"]
 	path = thirdparty/cube
 	url = https://github.com/isndev/cube.git
-[submodule "thirdparty/zmq"]
-	path = thirdparty/zmq
-	url = https://github.com/zeromq/libzmq.git
 [submodule "thirdparty/caf"]
 	path = thirdparty/caf
 	url = https://github.com/actor-framework/actor-framework.git

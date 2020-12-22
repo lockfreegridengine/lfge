@@ -6,13 +6,15 @@
 
 #include <chrono>
 #include<algorithm>
-#include "core/DataContainer.hpp"
-#include "RegisteringService.hpp"
+#include "registering_service.hpp"
 #include <thread>
 #include <sstream>
 
+#include "core/logger.hpp"
+
 using namespace caf;
 using namespace lfge::resource_manager;
+using namespace lfge::core;
 
 using typed_tester = typed_actor<
           result<void>( lfge::core::start_atom )//,
@@ -111,7 +113,22 @@ void testRegisteringSystem( blocking_actor *self, typed_registration_actor_hdl r
   }
 }*/
 
+behavior logListener( caf::event_based_actor* self )
+{
+  auto grp = lfge::core::logger::getGroup();
+  if(grp)
+  {
+    self->join(*grp);
+  }
+  return [=]( const loglevel& level, const std::string& str )
+  {
+    aout(self) << str << std::endl;
+  };
+}
+
 void caf_main(actor_system& system, const caf::actor_system_config& cfg) {
+
+  lfge::core::logger::init(system);
 
   auto port = get_or(system.config(), "port", uint16_t{4555});
   auto res = system.middleman().publish_local_groups(port);
@@ -121,8 +138,9 @@ void caf_main(actor_system& system, const caf::actor_system_config& cfg) {
     return;
   }
   std::cout << "*** listening at port " << *res << std::endl;
-  auto regservice = system.spawn<RegisteringService>(  );
+  auto regservice = system.spawn<registering_service>(  );
   system.spawn(testRegisteringSystem, regservice);
+  system.spawn(logListener);
 }
 
 // creates a main function for us that calls our caf_main
