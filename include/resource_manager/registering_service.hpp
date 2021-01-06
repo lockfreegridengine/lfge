@@ -5,8 +5,16 @@
 
 namespace lfge::resource_manager
 {
-    using typed_registration_actor = caf::typed_event_based_actor<
+    using typed_registering_client = caf::typed_actor<
+        caf::result<void>( lfge::core::deregister_atom ),
+        caf::result<void>( lfge::core::new_id_atom, std::string),
+        caf::result<lfge::core::heartbeat_reply_atom, std::size_t>(lfge::core::heartbeat_atom, std::size_t)
+    >;
+
+
+    using typed_registration_actor = caf::typed_actor<
                                                 caf::result<lfge::core::new_id_atom, std::string>(lfge::core::register_atom, ServiceName),
+                                                caf::result<void>(lfge::core::register_atom, ServiceName, caf::actor_addr),
                                                 caf::result<void>( lfge::core::register_atom, ServiceName, ServiceId),
                                                 caf::result<void>( lfge::core::unregister_atom, ServiceName, ServiceId),
                                                 caf::result<void>( lfge::core::unregister_atom, ServiceId ),
@@ -17,10 +25,7 @@ namespace lfge::resource_manager
 
     class registering_service;
 
-    using subscriber_typed_registration_actor = caf::extend<typed_registration_actor>::with<caf::mixin::subscriber>;
-
-
-    using typed_registration_actor_hdl = subscriber_typed_registration_actor::actor_hdl;
+    using subscriber_typed_registration_actor = caf::extend<typed_registration_actor::base>::with<caf::mixin::subscriber>;
 
     class registering_service : public subscriber_typed_registration_actor
     {

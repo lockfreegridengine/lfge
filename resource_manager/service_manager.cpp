@@ -1,5 +1,5 @@
-#include "service_manager.hpp"
-#include "registering_service.hpp"
+#include "resource_manager/service_manager.hpp"
+#include "resource_manager/registering_service.hpp"
 
 #include "core/core_atoms.hpp"
 #include "core/logger.hpp"

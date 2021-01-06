@@ -33,6 +33,7 @@ namespace lfge::resource_manager
         caf::actor_addr creator;
 
         service_state state;
+        
         public:
         service_manager( caf::actor_config& config, const ServiceName &serviceName, const caf::actor_addr creator );
 

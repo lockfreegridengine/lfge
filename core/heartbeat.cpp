@@ -81,20 +81,17 @@ heartbeat_sender::behavior_type heartbeat_sender::make_behavior()
                     [this]( const error& err )
                     {
                         logger::log( loglevel::warning, getName() + " heartbeat sender got error " + to_string(err) );
-                        if( err == caf::sec::request_timeout )
+                        if( onTimeout )
                         {
-                            if( onTimeout )
-                            {
-                                onTimeout(*this);
-                            }
+                            onTimeout(*this);
+                        }
 
-                            ++numberOfPastTimeouts;
-                            if( numberOfPastTimeouts >= n )
-                            {
-                                if(onNTimeouts)
-                                    onNTimeouts(*this);
-                                quit();
-                            }
+                        ++numberOfPastTimeouts;
+                        if( numberOfPastTimeouts >= n )
+                        {
+                            if(onNTimeouts)
+                                onNTimeouts(*this);
+                            quit();
                         }
                     }
             );
@@ -135,7 +132,12 @@ heartbeat_receiver::behavior_type heartbeat_receiver::make_behavior()
         [this](heartbeat_atom, std::size_t messageIndex) -> result<heartbeat_reply_atom, std::size_t>
         {
             logger::log( loglevel::comm, getName() + " received an hb message ");
-            onHeartbeat(*this, messageIndex);
+            
+            if(onHeartbeat)
+            {
+                onHeartbeat(*this, messageIndex);
+            }
+
             return caf::make_result( heartbeat_reply_atom_v, messageIndex );
         },
         after( timeout == 0 ? infinite : std::chrono::milliseconds(timeout) ) >> 

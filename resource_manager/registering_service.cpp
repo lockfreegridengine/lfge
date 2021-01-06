@@ -1,4 +1,4 @@
-#include "registering_service.hpp"
+#include "resource_manager/registering_service.hpp"
 #include <algorithm>
 #include "core/heartbeat.hpp"
 #include "core/logger.hpp"
@@ -112,6 +112,17 @@ registering_service::behavior_type registering_service::make_behavior()
             spawn_hb_monitor(serviceName, id, actor);
 
             return caf::make_result( lfge::core::new_id_atom_v, id);
+        },
+        [this](lfge::core::register_atom, ServiceName serviceName, caf::actor_addr addr)
+        {
+            std::string id = create_unique_id();
+            caf::actor actor = caf::actor_cast<caf::actor>( addr );
+
+            register_service( serviceName, id, actor);
+
+            spawn_hb_monitor(serviceName, id, actor);
+
+            anon_send( actor, lfge::core::new_id_atom_v, id );
         },
         [this]( lfge::core::register_atom, ServiceName serviceName, ServiceId id )
         {
