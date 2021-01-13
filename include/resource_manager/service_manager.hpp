@@ -16,7 +16,8 @@ namespace lfge::resource_manager
 
     struct service_state
     {
-        std::list< std::pair<ServiceId, caf::actor> > idsAndActors;
+        std::vector< std::pair<ServiceId, caf::actor> > idsAndActors;
+        std::size_t current;
     };
 
     using typed_service_manager = caf::typed_event_based_actor<

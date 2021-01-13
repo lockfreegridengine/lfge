@@ -13,6 +13,7 @@ service_manager::service_manager( caf::actor_config& config, const ServiceName &
             : typed_service_manager(config), serviceName(serviceName), creator(creator)
 {
     logger::log( loglevel::comm, "Creating a service named " + serviceName );
+    this->state.current = 0;
 }
 
 const ServiceName& service_manager::getServiceName() const
@@ -52,11 +53,14 @@ service_manager::behavior_type service_manager::make_behavior()
                 logger::log( loglevel::error, "Service " + getServiceName() + " is empty" );
                 return caf::sec::runtime_error;
             }
-            auto front = this->state.idsAndActors.front();
-            this->state.idsAndActors.pop_front();
-            this->state.idsAndActors.push_back(front);
+            if( this->state.current >= this->state.idsAndActors.size() )
+            {
+                this->state.current = 0;
+            }
+            auto front = this->state.idsAndActors[ this->state.current ];
+            ++this->state.current;
 
-            logger::log( loglevel::error, "Requester for " + getServiceName() + " got " + front.first );
+            logger::log( loglevel::comm, "Requester for " + getServiceName() + " got " + front.first );
             return caf::make_result( front.first, front.second.address() );
         }
     };
@@ -64,7 +68,7 @@ service_manager::behavior_type service_manager::make_behavior()
 
 void service_manager::clear()
 {
-    logger::log( loglevel::error, "Clearing all services for " + getServiceName() );
+    logger::log( loglevel::comm, "Clearing all services for " + getServiceName() );
     for( auto idAndActor : this->state.idsAndActors )
     {
         anon_send( idAndActor.second, lfge::core::deregister_atom_v );
