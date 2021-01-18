@@ -92,7 +92,7 @@ namespace lfge::core{
     class heartbeat_receiver : public typed_hb_receiver
     {
         std::string name;
-        std::function<void (heartbeat_receiver&, const std::size_t&)> onHeartbeat;
+        std::function<void (heartbeat_receiver&)> onHeartbeat;
         std::function<void (heartbeat_receiver&)> afterTimeout;
         std::size_t timeout;
         std::atomic<bool> hasHeartbeat = false;
@@ -112,7 +112,7 @@ namespace lfge::core{
          */
         heartbeat_receiver(  caf::actor_config& config, 
                             std::string name = "",
-                            std::function<void (heartbeat_receiver&, const std::size_t&)> onHeartbeat = nullptr, 
+                            std::function<void (heartbeat_receiver&)> onHeartbeat = nullptr, 
                             std::size_t timeout = 0, 
                             std::function<void (heartbeat_receiver&)> afterTimeout = nullptr);
         

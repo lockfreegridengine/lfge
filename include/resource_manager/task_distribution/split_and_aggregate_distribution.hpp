@@ -5,6 +5,11 @@
 #include <list>
 #include <algorithm>
 
+
+#include "resource_manager/registering_service.hpp"
+#include "core/logger.hpp"
+#include "core/lfge_errors.hpp"
+
 namespace lfge::resource_manager
 {
     namespace task_distribution
@@ -36,7 +41,7 @@ namespace lfge::resource_manager
             splitter_function splitterFunction;
             aggregation_function aggregationFunction;
             on_aggregate_result_recieved on_res;
-            bool retryOnFailure;
+            bool retryOnFailure, canReplyOnFailedSubtask;
             int maxRetryCount;
 
             using response_promise_type = typename caf::detail::make_response_promise_helper<OutputType>::type;
@@ -49,6 +54,7 @@ namespace lfge::resource_manager
                     numberOfRetries.resize(size, 0);
                     hasRes.resize(size, false);
                 }
+                std::vector<SubtaskType> subtasks;
                 std::size_t size;
                 std::vector<SubtaskResponseType> result_vector;
                 std::vector<int> numberOfRetries;
@@ -76,6 +82,7 @@ namespace lfge::resource_manager
                 registrationActor(registrationActor), 
                 splitterFunction(splitterFunction), 
                 aggregationFunction(aggregationFunction),
+                canReplyOnFailedSubtask(canReplyOnFailedSubtask),
                 on_res(on_res),
                 retryOnFailure(retryOnFailure),
                 maxRetryCount(maxRetryCount)
@@ -92,11 +99,34 @@ namespace lfge::resource_manager
                 return true;
             }
 
-            void distributeOne( const SubtaskType& subtask, typename task_container::iterator taskIte, const std::size_t dataIndex)
+            void retryIfNeeded(typename task_container::iterator taskIte, const std::size_t dataIndex, const caf::error& e)
+            {
+                bool retry = retryOnFailure && taskIte->numberOfRetries[dataIndex] < maxRetryCount;
+                if( retry )
+                {
+                    lfge::core::logger::log( lfge::core::loglevel::comm, "split_and_aggregate_distributor got error " + to_string(e) + " for index " + std::to_string(dataIndex) + " will retry " );
+                        
+                    ++taskIte->numberOfRetries[dataIndex];
+                    distributeOne( taskIte, dataIndex );
+                }
+                else
+                {
+                    lfge::core::logger::log( lfge::core::loglevel::comm, "split_and_aggregate_distributor got error " + to_string(e) + " for index " + std::to_string(dataIndex) + " will not retry " );
+                    if(!canReplyOnFailedSubtask)
+                    {
+                        taskIte->responsePromise.deliver(e);
+                        tasks_pending.erase( taskIte );
+                    }
+                }
+                
+            }
+
+            void distributeOne( typename task_container::iterator taskIte, const std::size_t dataIndex)
             {
                 this->request( registrationActor, caf::infinite, lfge::core::find_service_v, serviceName ).then(
-                        [this, subtask,taskIte,dataIndex]( std::string name, caf::actor_addr addr ) mutable
+                        [this,taskIte,dataIndex]( std::string name, caf::actor_addr addr ) mutable
                         {
+                            const auto & subtask = taskIte->subtasks[dataIndex];
                             auto casted_addr = caf::actor_cast< typed_split_and_agg_task_task_runner<SubtaskResponseType, SubtaskType> >(addr);
                             this->request(casted_addr, caf::infinite, subtask ).then( 
                                         [this,taskIte,dataIndex](SubtaskResponseType output) mutable
@@ -106,17 +136,18 @@ namespace lfge::resource_manager
                                             if( hasFinishedTheTreatment(taskIte) )
                                             {
                                                 taskIte->responsePromise.deliver( aggregationFunction(taskIte->result_vector) );
+                                                tasks_pending.erase( taskIte );
                                             }
                                         },
                                         [this,taskIte,dataIndex]( const caf::error e ) mutable
                                         {
-                                            taskIte->responsePromise.deliver(e);
+                                           retryIfNeeded( taskIte, dataIndex, e );
                                         }
                                     );
                         },
-                        [this, taskIte]( caf::error e )
+                        [this, taskIte, dataIndex]( caf::error e )
                         {
-                            taskIte->responsePromise.deliver(e);
+                            retryIfNeeded( taskIte, dataIndex, e );
                         });
             }
 
@@ -130,9 +161,11 @@ namespace lfge::resource_manager
                         std::vector<SubtaskType> splittedTasks = splitterFunction( inputs ... );
                         tasks_pending.push_front( task( splittedTasks.size(), rp ) );
                         typename task_container::iterator for_current_task = tasks_pending.begin();
-                        for( auto ite = splittedTasks.begin(); ite != splittedTasks.end(); ++ite )
+                        auto size = splittedTasks.size();
+                        for_current_task->subtasks = std::move(splittedTasks);
+                        for( std::size_t i=0; i<size; ++i )
                         {
-                            distributeOne( *ite, for_current_task, std::distance( splittedTasks.begin(), ite ) );
+                            distributeOne( for_current_task, i );
                         }
                         return rp;
                     }

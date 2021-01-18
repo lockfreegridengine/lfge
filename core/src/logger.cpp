@@ -5,7 +5,7 @@
 using namespace lfge::core;
 
 caf::actor_system *act_system = nullptr;
-const char *log_group_name = "log";
+const char *logger::log_group_name = "log";
 
 caf::expected<caf::group> logger::getGroup()
 {
@@ -25,4 +25,9 @@ void logger::log( const loglevel &level, const std::string& message )
         caf::scoped_actor self {*act_system};
         self->send(grp, level, message);
     }
+}
+
+void logger::stop()
+{
+    act_system = nullptr;
 }

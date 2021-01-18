@@ -1,18 +1,16 @@
 #pragma once
 
-#include "caf/all.hpp"
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
 #include <random>
 #include <list>
 
-#include "core/core_atoms.hpp"
+#include "resource_manager/actor_defs.hpp"
 
 namespace lfge::resource_manager
 {
-    using ServiceName = std::string;
-    using ServiceId = std::string;
+    using typed_service_manager_hdl = typed_service_manager::actor_hdl;
 
     struct service_state
     {
@@ -20,23 +18,15 @@ namespace lfge::resource_manager
         std::size_t current;
     };
 
-    using typed_service_manager = caf::typed_event_based_actor<
-                                    caf::result<void>( lfge::core::add_id_to_service, ServiceId, const caf::actor),
-                                    caf::result<void>( lfge::core::remove_actor_for_service, ServiceId id ),
-                                    caf::result< std::string, caf::actor_addr >( lfge::core::find_service )
-                                    >;
-
-    using typed_service_manager_hdl = typed_service_manager::actor_hdl;
-
     class service_manager : public typed_service_manager
     {
         ServiceName serviceName;
-        caf::actor_addr creator;
+        typed_registration_actor creator;
 
         service_state state;
         
         public:
-        service_manager( caf::actor_config& config, const ServiceName &serviceName, const caf::actor_addr creator );
+        service_manager( caf::actor_config& config, const ServiceName &serviceName, typed_registration_actor creator );
 
         const ServiceName& getServiceName() const;
 

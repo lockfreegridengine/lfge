@@ -112,7 +112,7 @@ heartbeat_sender::behavior_type heartbeat_sender::make_behavior()
 
 heartbeat_receiver::heartbeat_receiver(  caf::actor_config& config, 
                     std::string name,
-                    std::function<void (heartbeat_receiver&, const std::size_t&)> onHeartbeat, 
+                    std::function<void (heartbeat_receiver&)> onHeartbeat, 
                     std::size_t timeout, 
                     std::function<void (heartbeat_receiver&)> afterTimeout) : 
                     typed_hb_receiver(config), name(name), onHeartbeat(onHeartbeat), timeout(timeout), afterTimeout(afterTimeout)
@@ -135,7 +135,7 @@ heartbeat_receiver::behavior_type heartbeat_receiver::make_behavior()
             
             if(onHeartbeat)
             {
-                onHeartbeat(*this, messageIndex);
+                onHeartbeat(*this);
             }
 
             return caf::make_result( heartbeat_reply_atom_v, messageIndex );

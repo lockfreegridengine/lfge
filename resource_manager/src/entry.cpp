@@ -68,7 +68,7 @@ typed_tester::behavior_type testSAADistribSystem(typed_tester::pointer self, typ
   return {
     [=]( lfge::core::start_atom )
     {
-      std::size_t inp = 100000;
+      std::size_t inp = 1000;
       self->request( replier, caf::infinite, inp ).then(
         [=](std::size_t reply)
         {
@@ -76,7 +76,7 @@ typed_tester::behavior_type testSAADistribSystem(typed_tester::pointer self, typ
         }
       );
     },
-    after( std::chrono::seconds( 1000 ) ) >> [=]()
+    after( std::chrono::seconds( 1 ) ) >> [=]()
     {
       self->send(self, lfge::core::start_atom_v);
     }

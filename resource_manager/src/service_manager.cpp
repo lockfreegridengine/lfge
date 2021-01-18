@@ -9,7 +9,7 @@
 using namespace lfge::resource_manager;
 using namespace lfge::core;
 
-service_manager::service_manager( caf::actor_config& config, const ServiceName &serviceName, const caf::actor_addr creator ) 
+service_manager::service_manager( caf::actor_config& config, const ServiceName &serviceName, typed_registration_actor creator ) 
             : typed_service_manager(config), serviceName(serviceName), creator(creator)
 {
     logger::log( loglevel::comm, "Creating a service named " + serviceName );
@@ -25,8 +25,7 @@ service_manager::behavior_type service_manager::make_behavior()
 {
     this->set_exit_handler( [this](auto&& ptr, const caf::exit_msg&){
         logger::log( loglevel::comm, "Exiting a service named " + getServiceName() );
-        auto actor = caf::actor_cast<registering_service::actor_hdl>(creator);
-        this->send( actor, lfge::core::remove_atom_v, getServiceName() );
+        this->send( creator, lfge::core::remove_atom_v, getServiceName() );
     } );
 
     return {
@@ -35,15 +34,19 @@ service_manager::behavior_type service_manager::make_behavior()
             logger::log( loglevel::comm, "Adding " + id + " to service " + getServiceName() );
             this->state.idsAndActors.emplace_back( std::make_pair(id, actor) );
         },
+        [this]( lfge::core::add_id_to_service, ServiceId id, caf::actor_addr actorAddr)
+        {
+            logger::log( loglevel::comm, "Adding " + id + " to service " + getServiceName() );
+            caf::actor act = caf::actor_cast<caf::actor>(actorAddr);
+            this->state.idsAndActors.emplace_back( std::make_pair(id, act) );
+        },
         [this]( lfge::core::remove_actor_for_service, ServiceId id )
         {
             logger::log( loglevel::comm, "Removing " + id + " from service " + getServiceName() );
             this->state.idsAndActors.erase( std::remove_if( this->state.idsAndActors.begin(), this->state.idsAndActors.end(), [id]( auto& p ){ return p.first == id; } ) );
             if(this->state.idsAndActors.empty())
             {
-                auto actor = caf::actor_cast<registering_service::actor_hdl>(creator);
-                this->send( actor, lfge::core::remove_atom_v, getServiceName() );
-                quit();
+                this->send( creator, lfge::core::remove_atom_v, getServiceName() );
             }
         },
         [this]( lfge::core::find_service ) -> caf::result< ServiceId, caf::actor_addr >

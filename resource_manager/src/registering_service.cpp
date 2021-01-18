@@ -22,7 +22,7 @@ void registering_service::register_service( const ServiceName &name, const Servi
     if( ite == registeredServiceActors.end() )
     {
         // Service does not exists
-        auto newService = spawn<service_manager>( name, address() );
+        auto newService = spawn<service_manager>( name, caf::actor_cast<typed_registration_actor>(address()) );
 
         registeredServiceActors.insert( std::make_pair( name, newService ) );
         send( newService, lfge::core::add_id_to_service_v, id, actorToCall );
@@ -144,7 +144,12 @@ registering_service::behavior_type registering_service::make_behavior()
         [this]( lfge::core::remove_atom, ServiceName name )
         {
             logger::log( loglevel::warning, "Removing service " + name );
-            registeredServiceActors.erase(name);
+            auto ite = registeredServiceActors.find( name );
+            if(ite !=  registeredServiceActors.end())
+            {
+                registeredServiceActors.erase(name);
+                send_exit( ite->second, caf::sec::none );
+            }
         },
         [this]( lfge::core::find_service, ServiceName serviceName ) -> caf::result< std::string, caf::actor_addr >
         {

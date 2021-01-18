@@ -16,7 +16,25 @@ set(LFGE_VERSION_PATCH 0)
 set(LFGE_VERSION_TWEAK 0)
 set(LFGE_BINARY_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
 
+option(LFGE_ENABLE_TESTING "Build unit test suites" ON)
+
 find_package(CAF)
+
+
+if(LFGE_ENABLE_TESTING)
+    enable_testing()
+    function(lfge_add_test_suites target)
+
+    foreach(suiteName ${ARGN})
+        string(REPLACE "." "/" suitePath ${suiteName})
+        target_sources(${target} PRIVATE
+        "${CMAKE_CURRENT_SOURCE_DIR}/test/${suitePath}.cpp")
+      add_test(NAME ${suiteName}
+               COMMAND ${target} -r300 -n -v5 -s"^${suiteName}$")
+    endforeach()
+    endfunction()
+endif()
+
 
 add_subdirectory(core)
 add_subdirectory(client)
